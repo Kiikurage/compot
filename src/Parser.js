@@ -1,4 +1,5 @@
 var htmlparser = require("htmlparser2"),
+    Node = require('./Node.js'),
     constance = require('./constance.js');
 
 function Parser() {
@@ -40,43 +41,67 @@ Parser.prototype._parseComment = function(comment) {
 };
 
 Parser.prototype.onOpenTag = function(name, attrs) {
-    var node = {
-        type: Type.ELEMENT,
-        name: name,
-        attrs: attrs,
-        children: [],
-        parent: this.currentNode
-    };
+    var node;
 
-    this.currentNode.children.push(node);
+    switch (name.toLowerCase()) {
+        case 'link':
+            if (attrs.rel = "compot") {
+                node = new Node({
+                    type: Type.LINK,
+                    name: name,
+                    attrs: attrs,
+                });
+                this.root.links.push(node);
+                break
+            }
+            //@TODO falldown is deprecated...
+
+        case 'template':
+            if (attrs.type = "compot") {
+                node = new Node({
+                    type: Type.TEMPLATE,
+                    name: attrs.name,
+                    attrs: attrs,
+                });
+                node.contents = [];
+                this.root.templates.push(node);
+                break
+            }
+            //@TODO falldown is deprecated...
+
+        case 'content':
+            node = new Node({
+                type: Type.CONTENT,
+                name: name.toLowerCase(),
+            });
+            break
+
+        default:
+            node = new Node({
+                type: Type.ELEMENT,
+                name: name,
+                attrs: attrs,
+            });
+    }
+
+    this.currentNode.appendChild(node);
     this.currentNode = node;
 };
 
 Parser.prototype.onText = function(text) {
-    var node = {
+    if (text.trim() === '') return
+
+    var node = new Node({
         type: Type.TEXT,
-        text: text,
-        parent: this.currentNode
-    };
+        name: 'text',
+        text: text
+    });
 
-    this.currentNode.children.push(node);
-};
-
-Parser.prototype.onComment = function(comment) {
-    var node = this._parseComment(comment);
-
-    switch(node.type) {
-        case Type.COMMENT:
-            this.currentNode.children.push(node);
-            break
-
-        case Type.COMPONENT:
-            this.root.components.push(node);
-            break
-    }
+    this.currentNode.appendChild(node);
 };
 
 Parser.prototype.onCloseTag = function(name) {
+
     this.currentNode = this.currentNode.parent;
 };
 
@@ -96,19 +121,18 @@ Parser.prototype.init = function(callback) {
     this.htmlparser = new htmlparser.Parser({
         onopentag: this.onOpenTag.bind(this),
         ontext: this.onText.bind(this),
-        oncomment: this.onComment.bind(this),
         onclosetag: this.onCloseTag.bind(this),
         onend: this.onEnd.bind(this),
     }, {
         decodeEntities: true
     });
 
-    this.root = {
+    this.root = new Node({
+        name: 'root',
         type: Type.ROOT,
-        children: [],
-        components: [],
-        parent: null
-    };
+    });
+    this.root.templates = [];
+    this.root.links = [];
 
     this.currentNode = this.root;
     this.callback = callback;

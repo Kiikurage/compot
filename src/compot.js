@@ -3,22 +3,15 @@ var Renderer = require('./Renderer.js'),
     path = require('path'),
     _ = module.exports;
 
-function extend(dest, src){
-    Object.keys(src).forEach(function(key){
-        dest[key] = src[key]
-    });
-    return dest
-}
-
 _.render = function(text, opts, callback) {
     if (arguments.length === 2) {
         callback = opts;
         opts = {};
     }
 
-    opts = extend({
+    opts = opts || {
         root: process.cwd()
-    }, opts);
+    };
 
     (new Renderer()).render(text, opts, callback);
 };

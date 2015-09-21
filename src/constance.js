@@ -4,7 +4,9 @@ module.exports = {
         TEXT: 'text',
         COMMENT: 'comment',
         ROOT: 'root',
-        COMPONENT: 'component'
+        LINK: 'link',
+        TEMPLATE: 'template',
+        CONTENT: 'content'
     },
     PREFIX_COMP: '@comp'
 };
