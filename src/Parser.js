@@ -45,7 +45,7 @@ Parser.prototype.onOpenTag = function(name, attrs) {
 
     switch (name.toLowerCase()) {
         case 'link':
-            if (attrs.rel = "compot") {
+            if (attrs.rel === "compot") {
                 node = new Node({
                     type: Type.LINK,
                     name: name,
@@ -57,7 +57,7 @@ Parser.prototype.onOpenTag = function(name, attrs) {
             //@TODO falldown is deprecated...
 
         case 'template':
-            if (attrs.type = "compot") {
+            if (attrs.type === "compot") {
                 node = new Node({
                     type: Type.TEMPLATE,
                     name: attrs.name,
