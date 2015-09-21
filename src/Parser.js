@@ -41,47 +41,37 @@ Parser.prototype._parseComment = function(comment) {
 };
 
 Parser.prototype.onOpenTag = function(name, attrs) {
-    var node;
+    var node,
+        name = name.toLowerCase();
 
-    switch (name.toLowerCase()) {
-        case 'link':
-            if (attrs.rel === "compot") {
-                node = new Node({
-                    type: Type.LINK,
-                    name: name,
-                    attrs: attrs,
-                });
-                this.root.links.push(node);
-                break
-            }
-            //@TODO falldown is deprecated...
+    if (name === 'link' && attrs.rel === 'compot') {
+        node = new Node({
+            type: Type.LINK,
+            name: name,
+            attrs: attrs,
+        });
+        this.root.links.push(node);
 
-        case 'template':
-            if (attrs.type === "compot") {
-                node = new Node({
-                    type: Type.TEMPLATE,
-                    name: attrs.name,
-                    attrs: attrs,
-                });
-                node.contents = [];
-                this.root.templates.push(node);
-                break
-            }
-            //@TODO falldown is deprecated...
+    } else if (name === 'template' && attrs.type === 'compot') {
+        node = new Node({
+            type: Type.TEMPLATE,
+            name: attrs.name,
+            attrs: attrs,
+        });
+        this.root.templates.push(node);
 
-        case 'content':
-            node = new Node({
-                type: Type.CONTENT,
-                name: name.toLowerCase(),
-            });
-            break
+    } else if (name === 'content') {
+        node = new Node({
+            type: Type.CONTENT,
+            name: name.toLowerCase(),
+        });
 
-        default:
-            node = new Node({
-                type: Type.ELEMENT,
-                name: name,
-                attrs: attrs,
-            });
+    } else {
+        node = new Node({
+            type: Type.ELEMENT,
+            name: name,
+            attrs: attrs,
+        });
     }
 
     this.currentNode.appendChild(node);
