@@ -6,7 +6,7 @@
     "bin": "./bin/compot",
     "repository": {
         "type": "git",
-        "url": "git://github.com/username/repository.git"
+        "url": "git@github.com:Kiikurage/compot.git"
     },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
