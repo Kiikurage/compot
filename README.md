@@ -19,8 +19,9 @@ compot src dest
 ```html
 <!-- main.html -->
 
-<!-- @comp name="my-tag" src="./my-tag.html" -->
-<my-tag>
+<link rel="compot" href="./my-tag.html">
+
+<my-tag class="foo">
     This is <b>my custom tag</b>
 </my-tag>
 ```
@@ -28,10 +29,14 @@ compot src dest
 ```html
 <!-- my-tag.html -->
 
-<div class="my-tag">
-    <header><content></content></header>
-    <p> Lorem ipsum </p>
-</div>
+<template type="compot" name="my-tag">
+    <div class="buz">
+        <header>
+            <content></content>
+        </header>
+        <p> bar </p>
+    </div>
+</template>
 ```
 
 ```bash
@@ -42,8 +47,10 @@ The output is,
 
 ```html
 <!-- build.html -->
-<div class="my-tag">
-    <header>This is <b>my custom tag</b></header>
-    <p> Lorem ipsum </p>
+<div class="buz foo">
+    <header>
+        This is <b>my custom tag</b>
+    </header>
+    <p> bar </p>
 </div>
 ```

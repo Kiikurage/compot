@@ -6,40 +6,56 @@ var Parser = require('./Parser.js'),
 
 var Type = constance.Type;
 
+function extend(dest, src) {
+    Array.prototype.slice.call(arguments, 0)
+        .forEach(function(src) {
+            if (!src) return
+
+            Object.keys(src).forEach(function(key) {
+                dest[key] = src[key]
+            });
+        })
+
+    return dest
+}
+
 function Renderer() {
     this.root = '';
     this.parser = null;
     this.callback = null;
-    this.components = null;
-    this.componentNames = null;
-    this.contentStack = null;
+    this.templates = null;
+    this.loadedPath = null;
 }
 
 Renderer.prototype.render = function(text, opts, callback) {
     this.root = opts.root || process.cwd();
     this.parser = new Parser();
     this.callback = callback;
-    this.components = [];
-    this.componentNames = [];
-    this.contentStack = [];
+    this.templates = [];
+    this.loadedPath = {};
 
     this.parser.parse(text, this.onParseEnd.bind(this));
 };
 
-Renderer.prototype.onParseEnd = function(err, res) {
+Renderer.prototype.onParseEnd = function(err, rootNode) {
     if (err) return this.callback(err, null)
 
     var self = this;
 
-    this.pRegisterComponents(res, {
+    this.pResolveTemplateAndLink(rootNode, {
             root: this.root
         })
         .then(function() {
-            self.callback(null, self.write(res));
+            self.callback(null, self.write(rootNode));
         })
         .catch(function(err) {
             self.callback(err, null);
-        });
+        })
+};
+
+Renderer.prototype.pResolveTemplateAndLink = function(rootNode, opt) {
+    this.registerTemplates(rootNode);
+    return this.pLoadLinks(rootNode, opt)
 };
 
 Renderer.prototype.write = function(node) {
@@ -55,16 +71,21 @@ Renderer.prototype.write = function(node) {
             buffer += node.text.trim();
             break;
 
-        case Type.ELEMENT:
-            if (this.isComponent(node)) {
-                buffer += this.writeComponent(node);
+        case Type.LINK:
+            buffer = '';    //link[type="compot"] is not output.
+            break;
 
-            } else if (node.name === 'content') {
-                buffer += this.writeContent(node);
+        case Type.ELEMENT:
+            if (this.templates[node.name]) {
+                buffer += this.writeComponent(node);
 
             } else {
                 buffer += this.writeElement(node);
             }
+            break;
+
+        case Type.CONTENT:
+            buffer += this.writeChildren(node);
             break;
 
         default:
@@ -81,14 +102,28 @@ Renderer.prototype.writeChildren = function(node) {
 };
 
 Renderer.prototype.writeComponent = function(node) {
-    var template = this.getTemplate(node),
-        buffer;
+    var template = this.getTemplate(node.name);
+    if (!template) return this.writeElement(node)
 
-    this.contentStack.unshift(node);
-    buffer = this.write(template);
-    this.contentStack.shift();
+    //clone from template
+    var clone = template.clone(true).children[0];
 
-    return buffer
+    //copy attributes
+    if (clone.attrs.class && node.attrs.class) {
+        node.attrs.class = clone.attrs.class + ' ' + node.attrs.class;
+    }
+    extend(clone.attrs, node.attrs);
+
+    var contents = clone.find('content'),
+        content = contents[0];
+
+    if (content) {
+        node.children.forEach(function(child){
+            content.appendChild(child);
+        });
+    }
+
+    return this.writeElement(clone);
 };
 
 Renderer.prototype.writeElement = function(node) {
@@ -97,9 +132,7 @@ Renderer.prototype.writeElement = function(node) {
     buffer += '<' + node.name;
 
     if (Object.keys(node.attrs).length) {
-        buffer += ' ' + Object.keys(node.attrs).map(function(key) {
-            return key + '="' + node.attrs[key] + '"'
-        }).join(' ');
+        buffer += ' ' + this.writeAttrs(node);
     }
 
     buffer += '>';
@@ -112,62 +145,66 @@ Renderer.prototype.writeElement = function(node) {
     return buffer
 };
 
+Renderer.prototype.writeAttrs = function(node) {
+    return Object.keys(node.attrs).map(function(key) {
+        return key + '="' + node.attrs[key] + '"'
+    }).join(' ');
+};
+
 Renderer.prototype.writeContent = function(node) {
-    return this.writeChildren(this.contentStack[0]);
+    //@TODO
+    return ''
 };
 
 //------------------------------------------------------------------------------
-// Component
+// Templates
 
-Renderer.prototype.pRegisterComponents = function(rootNode, opts) {
-    var promises = [],
-        components = rootNode.components
+Renderer.prototype.registerTemplates = function(rootNode) {
+    var templates = rootNode.templates
 
-    components.forEach(function(component) {
-        if (this.isComponent(component.attrs.name)) {
+    templates.forEach(function(template) {
+        if (this.templates[template.name]) {
             //handle loading component more than once
             return
         }
 
-        this.components.push(component);
-        this.componentNames.push(component.attrs.name);
-        promises.push(this.pLoadComponent(component, opts));
+        this.templates[template.name] = template;
+    }, this);
+};
+
+Renderer.prototype.getTemplate = function(name) {
+    return this.templates[name]
+};
+
+Renderer.prototype.pLoadLinks = function(rootNode, opts) {
+    var ps = rootNode.links.map(function(link) {
+        return this.pLoadLink(link, opts);
     }, this);
 
-    return Promise.all(promises)
+    return Promise.all(ps)
 };
 
-Renderer.prototype.isComponent = function(node) {
-    return (this.componentNames.indexOf(node.name) !== -1)
-};
-
-Renderer.prototype.getTemplate = function(node) {
-    var index = this.componentNames.indexOf(node.name);
-
-    if (index === -1) return null
-
-    return this.components[index].template
-};
-
-Renderer.prototype.pLoadComponent = function(component, opts) {
+Renderer.prototype.pLoadLink = function(link, opts) {
     var self = this;
 
     return new Promise(function(resolve, reject) {
-        var filePath = path.resolve(opts.root, component.attrs.src);
+        var filePath = path.resolve(opts.root, link.attrs.href);
+
+        if (self.loadedPath[filePath]) return resolve();
 
         fs.readFile(filePath, 'utf-8', function(err, res) {
             if (err) return reject(err);
 
-            new Parser().parse(res, function(err, res) {
+            new Parser().parse(res, function(err, rootNode) {
                 if (err) return reject(err);
 
-                component.template = res;
+                self.loadedPath[filePath] = true;
 
-                var ps = self.pRegisterComponents(res, {
-                    root: path.dirname(filePath)
-                });
-
-                resolve(ps);
+                return self
+                    .pResolveTemplateAndLink(rootNode, {
+                        root: path.dirname(filePath)
+                    })
+                    .then(resolve)
             });
         });
     })
