@@ -1,0 +1,19 @@
+{
+  "name": "compot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": {
+    "name": "kikurage",
+    "email": "y.kikura@gmail.com"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "es6-promise": "^3.0.2",
+    "htmlparser2": "^3.8.3",
+    "minimist": "^1.2.0"
+  }
+}

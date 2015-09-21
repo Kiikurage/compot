@@ -1,0 +1,31 @@
+#!/usr/bin/env node
+
+var compot = require('../src/compot.js'),
+    fs = require('fs'),
+    path = require('path');
+
+var argv = require('minimist')(process.argv.slice(2));
+
+var src = argv._[0],
+    dest = argv._[1];
+
+fs.readFile(src, 'utf-8', function(err, res){
+    if (err) {
+        return console.error(err);
+    }
+
+    compot.render(res, {
+        root: path.dirname(src)
+    }, function(err, res){
+        if (err) {
+            return console.error(err);
+        }
+
+        fs.writeFile(dest, res, 'utf-8', function(err, res){
+            if (err) {
+                return console.error(err);
+            }
+
+        });
+    })
+});
