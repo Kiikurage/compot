@@ -6,6 +6,7 @@ module.exports = {
         ROOT: 'root',
         LINK: 'link',
         TEMPLATE: 'template',
+        IF: 'if',
         CONTENT: 'content'
     },
     PREFIX_COMP: '@comp'

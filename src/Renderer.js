@@ -6,19 +6,6 @@ var Parser = require('./Parser.js'),
 
 var Type = constance.Type;
 
-function extend(dest, src) {
-    Array.prototype.slice.call(arguments, 0)
-        .forEach(function(src) {
-            if (!src) return
-
-            Object.keys(src).forEach(function(key) {
-                dest[key] = src[key]
-            });
-        })
-
-    return dest
-}
-
 function Renderer() {
     this.root = '';
     this.parser = null;
@@ -68,11 +55,11 @@ Renderer.prototype.write = function(node) {
             break;
 
         case Type.TEXT:
-            buffer += node.text.trim();
+            buffer += this.writeText(node);
             break;
 
         case Type.LINK:
-            buffer = '';    //link[type="compot"] is not output.
+            buffer = ''; //link[type="compot"] is not output.
             break;
 
         case Type.ELEMENT:
@@ -89,10 +76,14 @@ Renderer.prototype.write = function(node) {
             break;
 
         default:
-            console.warn('unhandled node type: %s', node.type);
+            console.log('unhandled node type: %s', node.type);
     }
 
     return buffer;
+};
+
+Renderer.prototype.writeText = function(node) {
+    return node.text
 };
 
 Renderer.prototype.writeChildren = function(node) {
@@ -105,25 +96,26 @@ Renderer.prototype.writeComponent = function(node) {
     var template = this.getTemplate(node.name);
     if (!template) return this.writeElement(node)
 
-    //clone from template
-    var clone = template.clone(true).children[0];
+    //import distributed node from template
+    var clone = this.distributeNode(template.children[0], node.attrs);
 
     //copy attributes
     if (clone.attrs.class && node.attrs.class) {
         node.attrs.class = clone.attrs.class + ' ' + node.attrs.class;
     }
-    extend(clone.attrs, node.attrs);
+    Object.keys(node.attrs).forEach(function(key) {
+        //resolve attribute placeholders
+        clone.attrs[key] = node.attrs[key];
+    }, this);
 
-    var contents = clone.find('content'),
-        content = contents[0];
+    //import original nodes
+    this.importOriginalNodes(node, clone);
 
-    if (content) {
-        node.children.forEach(function(child){
-            content.appendChild(child);
-        });
-    }
+    //write
+    var buffer = this.writeElement(clone);
 
-    return this.writeElement(clone);
+    return buffer
+
 };
 
 Renderer.prototype.writeElement = function(node) {
@@ -147,13 +139,60 @@ Renderer.prototype.writeElement = function(node) {
 
 Renderer.prototype.writeAttrs = function(node) {
     return Object.keys(node.attrs).map(function(key) {
-        return key + '="' + node.attrs[key] + '"'
-    }).join(' ');
+        if (node.attrs[key] === '') {
+            return key
+        } else {
+            return key + '="' + node.attrs[key] + '"'
+        }
+    }, this).join(' ');
 };
 
-Renderer.prototype.writeContent = function(node) {
-    //@TODO
-    return ''
+Renderer.prototype.resolvePlaceholder = function(placeholder, datas) {
+    var placeholder = placeholder.trim(),
+        ma = placeholder.match(/^\{\{([^\}]+)\}\}$/);
+
+    if (ma && (ma[1] in datas)) {
+        return datas[ma[1]]
+    } else {
+        return placeholder
+    }
+};
+
+Renderer.prototype.importOriginalNodes = function(from, to) {
+    var contents = to.find('content');
+
+    //original nodes
+    var originalNodes = from.children.map(function(child) {
+        return this.distributeNode(child, from.attrs)
+    }, this);
+
+    //@TODO support "select" attribute of <content>
+    var content = contents[0];
+    if (content) {
+        originalNodes.forEach(function(dist) {
+            content.appendChild(dist);
+        });
+    }
+};
+
+Renderer.prototype.distributeNode = function(src, datas) {
+    var dist = src.clone(false);
+
+    //resolve placeholders in attributes
+    Object.keys(dist.attrs).forEach(function(key) {
+        dist.attrs[key] = this.resolvePlaceholder(dist.attrs[key], datas);
+    }, this);
+
+    if (dist.type === Type.TEXT) {
+        dist.text = this.resolvePlaceholder(dist.text, datas);
+    }
+
+    //distribute child nodes
+    src.children.forEach(function(child) {
+        dist.appendChild(this.distributeNode(child, datas));
+    }, this);
+
+    return dist
 };
 
 //------------------------------------------------------------------------------
@@ -178,7 +217,7 @@ Renderer.prototype.getTemplate = function(name) {
 
 Renderer.prototype.pLoadLinks = function(rootNode, opts) {
     var ps = rootNode.links.map(function(link) {
-        return this.pLoadLink(link, opts);
+        return this.pLoadLink(link, opts)
     }, this);
 
     return Promise.all(ps)
@@ -204,7 +243,7 @@ Renderer.prototype.pLoadLink = function(link, opts) {
                     .pResolveTemplateAndLink(rootNode, {
                         root: path.dirname(filePath)
                     })
-                    .then(resolve)
+                    .then(resolve, reject)
             });
         });
     })
