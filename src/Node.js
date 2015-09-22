@@ -22,12 +22,12 @@ function Node(params) {
     this.parent = null;
 };
 
-Node.prototype.clone = function(isDeep){
+Node.prototype.clone = function(isDeep) {
     var newNode = new Node(this);
 
     if (!isDeep) return newNode
 
-    this.children.forEach(function(child, i){
+    this.children.forEach(function(child, i) {
         newNode.appendChild(child.clone(true));
     });
     return newNode
@@ -55,7 +55,7 @@ Node.prototype.removeChild = function(child) {
 Node.prototype.find = function(name) {
     var res = [];
 
-    this.children.forEach(function(child){
+    this.children.forEach(function(child) {
         if (child.name === name) {
             res.push(child);
         }

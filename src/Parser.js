@@ -45,6 +45,7 @@ Parser.prototype.onOpenTag = function(name, attrs) {
         name = name.toLowerCase();
 
     if (name === 'link' && attrs.rel === 'compot') {
+        // handle <link rel="compot" href="...">
         node = new Node({
             type: Type.LINK,
             name: name,
@@ -53,6 +54,7 @@ Parser.prototype.onOpenTag = function(name, attrs) {
         this.root.links.push(node);
 
     } else if (name === 'template' && attrs.type === 'compot') {
+        // handle <template type="compot" name="...">
         node = new Node({
             type: Type.TEMPLATE,
             name: attrs.name,
@@ -60,13 +62,24 @@ Parser.prototype.onOpenTag = function(name, attrs) {
         });
         this.root.templates.push(node);
 
+    } else if (name === 'template' && attrs.if) {
+        // handle <template if="...">
+        node = new Node({
+            type: Type.IF,
+            name: name,
+            attrs: attrs,
+        });
+
     } else if (name === 'content') {
+        // handle <content>
         node = new Node({
             type: Type.CONTENT,
-            name: name.toLowerCase(),
+            name: name,
+            attrs: attrs,
         });
 
     } else {
+        // handle other elements
         node = new Node({
             type: Type.ELEMENT,
             name: name,
