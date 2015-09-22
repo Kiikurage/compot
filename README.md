@@ -5,8 +5,8 @@ Component-like template engine.
 
 The recommended way to use compot is using gulp plugin.
 
-[gulp-compot - GitHub](https://github.com/Kiikurage/gulp-compot)
-[gulp-compot - npm](https://www.npmjs.com/package/gulp-compot)
+- [gulp-compot - GitHub](https://github.com/Kiikurage/gulp-compot)
+- [gulp-compot - npm](https://www.npmjs.com/package/gulp-compot)
 
 ## Install
 
