@@ -148,10 +148,14 @@ Renderer.prototype.resolvePlaceholder = function(placeholder, datas) {
     var placeholder = placeholder.trim(),
         ma = placeholder.match(/^\{\{([^\}]+)\}\}$/);
 
-    if (ma && (ma[1] in datas)) {
-        return datas[ma[1]]
-    } else {
+    if (!ma) {
         return placeholder
+
+    } else if (ma[1] in datas) {
+        return datas[ma[1]]
+
+    } else {
+        return null
     }
 };
 
@@ -177,7 +181,13 @@ Renderer.prototype.distributeNode = function(src, datas) {
 
     //resolve placeholders in attributes
     Object.keys(dist.attrs).forEach(function(key) {
-        dist.attrs[key] = this.resolvePlaceholder(dist.attrs[key], datas);
+        var value = this.resolvePlaceholder(dist.attrs[key], datas);
+
+        if (value === null) {
+            delete dist.attrs[key];
+        } else {
+            dist.attrs[key] = value
+        }
     }, this);
 
     if (dist.type === Type.TEXT) {
