@@ -1,6 +1,6 @@
 {
     "name": "compot",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "description": "Component-like template engine.",
     "main": "./src/compot.js",
     "bin": "./bin/compot",
