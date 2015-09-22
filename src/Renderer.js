@@ -112,10 +112,7 @@ Renderer.prototype.writeComponent = function(node) {
     this.importOriginalNodes(node, clone);
 
     //write
-    var buffer = this.writeElement(clone);
-
-    return buffer
-
+    return this.write(clone);
 };
 
 Renderer.prototype.writeElement = function(node) {
@@ -184,7 +181,7 @@ Renderer.prototype.distributeNode = function(src, datas) {
     }, this);
 
     if (dist.type === Type.TEXT) {
-        dist.text = this.resolvePlaceholder(dist.text, datas);
+        dist.text = this.escape(this.resolvePlaceholder(dist.text, datas));
     }
 
     //distribute child nodes
@@ -247,6 +244,11 @@ Renderer.prototype.pLoadLink = function(link, opts) {
             });
         });
     })
+};
+
+Renderer.prototype.escape = function(src) {
+    return src.replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 };
 
 module.exports = Renderer;
